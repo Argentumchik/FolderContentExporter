@@ -11,7 +11,7 @@ WPF application for scanning folder contents and exporting file lists.
 - Async scanning with progress and cancellation
 
 ## Tech Stack
-- .NET 8 / 9 / 10 (укажи точно)
+- .NET 10
 - WPF
 - MVVM
 - CsvHelper
