@@ -1,14 +1,12 @@
-﻿using FileRedact.Core.Dto;
+﻿using FolderContentExporter.Dto;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace FileRedact.Core.Interfaces
+namespace FolderContentExporter.Interfaces
 {
     public interface IFileExportService
     {
-        void ExportToTxt(IEnumerable<TextFileItem> files, string exportPath, string exportFileName);
-        void ExportToCsv(IEnumerable<TextFileItem> files, string exportPath, string exportFileName);
-        void ExportToJson(IEnumerable<TextFileItem> files, string exportPath, string exportFileName);
+        void ExportFiles(IEnumerable<TextFileItem> files, string exportPath, ExportOptionsDto options);
     }
 }

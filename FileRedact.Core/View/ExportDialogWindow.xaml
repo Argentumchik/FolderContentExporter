@@ -1,0 +1,26 @@
+﻿<Window x:Class="FolderContentExporter.View.ExportDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FolderContentExporter.View"
+        mc:Ignorable="d"
+        Title="ExportDialogWindow" Height="265" Width="380">
+    
+    <GroupBox Header="Include fields" VerticalAlignment="Top">
+        <StackPanel Margin="5">
+            <CheckBox Content="File Name" Margin="10,5,0,0" IsChecked="{Binding IncludeFileName}" />
+            <CheckBox Content="Size" Margin="10,10,0,0" IsChecked="{Binding IncludeSize}" />
+            <CheckBox Content="Extention" Margin="10,10,0,0" IsChecked="{Binding IncludeExtension}" />
+            <CheckBox Content="Path" Margin="10,10,0,0" IsChecked="{Binding IncludePath}" />
+            <CheckBox Content="Created Date" Margin="10,10,0,0" IsChecked="{Binding IncludeCreatedDate}" />
+            <CheckBox Content="Modified Date" Margin="10,10,0,0" IsChecked="{Binding IncludeModifiedDate}" />
+
+            <StackPanel Orientation="Horizontal">
+                <TextBox HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,20,0,0" Width="150" Height="20" Text="{Binding ExportFileName, UpdateSourceTrigger=PropertyChanged}" />
+                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10, 0, 0, 0" VerticalContentAlignment="Center" Height="20" Width="79" ItemsSource="{Binding ExportModes}" SelectedItem="{Binding SelectedExportMode}"/>
+                <Button Content="Export" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,20,0,0" Width="75" Height="25" Command="{Binding ExitCommand}"/>
+            </StackPanel>
+        </StackPanel>
+    </GroupBox>
+</Window>

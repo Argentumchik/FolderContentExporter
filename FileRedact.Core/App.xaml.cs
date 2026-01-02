@@ -1,6 +1,8 @@
-﻿using FileRedact.Core.Interfaces;
-using FileRedact.Core.Services;
-using FileRedact.Core.ViewModels;
+﻿using FolderContentExporter;
+using FolderContentExporter.Interfaces;
+using FolderContentExporter.Services;
+using FolderContentExporter.View;
+using FolderContentExporter.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System.Configuration;
 using System.Data;
@@ -38,9 +40,11 @@ namespace FileRedact.Core
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
+            services.AddSingleton<ExportDialogViewModel>();
 
             // Views
             services.AddSingleton<MainWindow>();
+            services.AddSingleton<ExportDialogWindow>();
         }
     }
 

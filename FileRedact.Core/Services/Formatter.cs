@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace FileRedact.Core.Services
+namespace FolderContentExporter.Services
 {
     public static class Formatter
     {

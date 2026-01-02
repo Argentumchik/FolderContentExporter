@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace FileRedact.Core.ViewModels
+namespace FolderContentExporter.ViewModels
 {
     public class ViewModelBase : INotifyPropertyChanged
     {

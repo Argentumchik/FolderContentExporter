@@ -1,12 +1,13 @@
-﻿using FileRedact.Core.Dto;
+﻿using FolderContentExporter.Dto;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace FileRedact.Core.Interfaces
+namespace FolderContentExporter.Interfaces
 {
     public interface IFileSystemService
     {
-        IEnumerable<TextFileItem> GetFiles(string path, bool sub);
+        IAsyncEnumerable<TextFileItem> GetFilesAsync(string path, bool sub, CancellationToken token);
+        Task<int> TotalFilesAsync(string path, bool sub);
     }
 }

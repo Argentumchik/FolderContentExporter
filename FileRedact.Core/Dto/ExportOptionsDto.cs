@@ -4,8 +4,10 @@ using System.Text;
 
 namespace FolderContentExporter.Dto
 {
-    public class FileExportDto
+    public class ExportOptionsDto
     {
+        public ExportFields Fields { get; set; }
+        public ExportMode Mode { get; set; }
         public string FileName { get; set; } = string.Empty;
     }
 }

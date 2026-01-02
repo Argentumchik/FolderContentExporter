@@ -1,6 +1,6 @@
 ﻿using System.Windows.Input;
 
-namespace FileRedact.Core.Commands
+namespace FolderContentExporter.Commands
 {
     public class RelayCommand : ICommand
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace FileRedact.Core.Interfaces
+namespace FolderContentExporter.Interfaces
 {
     public interface IFolderDialogService
     {

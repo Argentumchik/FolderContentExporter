@@ -1,7 +1,7 @@
-﻿using FileRedact.Core.Commands;
-using FileRedact.Core.Dto;
-using FileRedact.Core.Interfaces;
-using FileRedact.Core.Services;
+﻿using FolderContentExporter.Commands;
+using FolderContentExporter.Dto;
+using FolderContentExporter.Interfaces;
+using FolderContentExporter.View;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,7 +11,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace FileRedact.Core.ViewModels
+namespace FolderContentExporter.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
@@ -22,10 +22,26 @@ namespace FileRedact.Core.ViewModels
         private string _selectedFolder = string.Empty;
         private string _exportFileName = "file";
         private bool _subfoldersIncluded;
+        private bool _isLoading;
+        private string _isCancelled = "Hidden";
+        private int _progress;
+        private int _totalFiles = 1;
+        private string _textBack;
+
         private ExportMode _selectedExportMode;
+        private CancellationTokenSource? _cts;
 
         public Array ExportModes => Enum.GetValues<ExportMode>();
 
+        public string TextBack
+        {
+            get => _textBack;
+            set
+            {
+                _textBack = value;
+                OnPropertyChanged();
+            }
+        }
         public string SelectedFolder
         {
             get => _selectedFolder;
@@ -33,6 +49,8 @@ namespace FileRedact.Core.ViewModels
             {
                 _selectedFolder = value;
                 OnPropertyChanged();
+
+                LoadFileCommand?.RaiseCanExecuteChanged();
             }
         }
         public bool SubfoldersIncluded 
@@ -42,10 +60,29 @@ namespace FileRedact.Core.ViewModels
             {
                 _subfoldersIncluded = value;
                 OnPropertyChanged();
-                if (_selectedFolder != null)
+                if (!string.IsNullOrEmpty(_selectedFolder))
                 {
-                    LoadFiles();
+                    _ = LoadFiles();
                 }
+            }
+        }
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set
+            {
+                _isLoading = value;
+                OnPropertyChanged();
+                LoadFileCommand?.RaiseCanExecuteChanged();
+            }
+        }
+        public string IsCancelled
+        {
+            get => _isCancelled;
+            set
+            {
+                _isCancelled = value;
+                OnPropertyChanged();
             }
         }
         public ExportMode SelectedExportMode
@@ -66,12 +103,31 @@ namespace FileRedact.Core.ViewModels
                 OnPropertyChanged();
             }
         }
+        public int Progress
+        {
+            get => _progress;
+            set
+            {
+                _progress = value;
+                OnPropertyChanged();
+            }
+        }
+        public int TotalFiles
+        {
+            get => _totalFiles;
+            set
+            {
+                _totalFiles = value;
+                OnPropertyChanged();
+            }
+        }
 
         public ObservableCollection<TextFileItem> Files { get; } = [];
 
         public ICommand SelectFolderCommand { get; }
-        public ICommand LoadFileCommand { get; }
+        public RelayCommandAsync LoadFileCommand { get; }
         public ICommand ExportFileCommand { get; }
+        public ICommand CancelCommand { get; }
 
         public MainViewModel(IFolderDialogService folderDialogService, IFileSystemService fileSystemService, IFileExportService fileExportService)
         {
@@ -80,54 +136,93 @@ namespace FileRedact.Core.ViewModels
             _fileExportService = fileExportService;
 
             SelectFolderCommand = new RelayCommand(SelectFolder);
-            LoadFileCommand = new RelayCommand(LoadFiles, CanLoadFiles);
+            LoadFileCommand = new RelayCommandAsync(LoadFiles, CanLoadFiles);
             ExportFileCommand = new RelayCommand(ExportFile, CanExportFiles);
+            CancelCommand = new RelayCommand(Cancel, () => IsLoading);
         }
 
         private void SelectFolder()
         {
             SelectedFolder = _folderDialogService.LoadFolder();
         }
+        private void Cancel()
+        {
+            _cts?.Cancel();
+        }
 
-        private void LoadFiles()
+        private async Task LoadFiles()
         {
             Files.Clear();
+            TotalFiles = await _fileSystemService.TotalFilesAsync(SelectedFolder, SubfoldersIncluded);
+            Progress = 0;
+            IsLoading = true;
+            IsCancelled = "Hidden";
 
-            var files = _fileSystemService.GetFiles(SelectedFolder, SubfoldersIncluded);
+            _cts = new CancellationTokenSource();
+            var token = _cts.Token;
 
-            foreach (var file in files)
+            try
             {
-                Files.Add(file);
+                await Task.Run(async () =>
+                {
+                    int progressed = 0;
+
+                    await foreach (var file in _fileSystemService.GetFilesAsync(SelectedFolder, SubfoldersIncluded, token))
+                    {
+                        progressed++;
+                        token.ThrowIfCancellationRequested();
+
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            Files.Add(file);
+                            if (progressed % 50 == 0 || progressed == TotalFiles)
+                            {
+                                Progress = progressed;
+                            }
+                        });
+                    }
+                }, token);
+            }
+            catch (OperationCanceledException)
+            {
+                IsCancelled = "Visible";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error");
+            }
+            finally
+            {
+                IsLoading = false;
+                _cts.Dispose();
+                _cts = null;
             }
         }
 
         private void ExportFile()
         {
-            ExportFileName = string.Concat(ExportFileName.Split(Path.GetInvalidFileNameChars()));
+            var dialog = new ExportDialogWindow();
+            var vm = new ExportDialogViewModel();
+            dialog.DataContext = vm;
 
-            var path = _folderDialogService.LoadFolder();
-
-            if (string.IsNullOrEmpty(ExportFileName))
+            if (dialog.ShowDialog() == true)
             {
-                MessageBox.Show("Please enter a valid export file name.", "Invalid File Name", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                var options = vm.BuildOptions();
+
+                var path = _folderDialogService.LoadFolder();
+
+                try
+                {
+                    _fileExportService.ExportFiles(Files, path, options);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"An error occurred during export: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                MessageBox.Show("Files exported successfully.", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            try
-            {
-                if (SelectedExportMode == ExportMode.TXT)
-                    _fileExportService.ExportToTxt(Files, path, ExportFileName);
-                else if (SelectedExportMode == ExportMode.CSV)
-                    _fileExportService.ExportToCsv(Files, path, ExportFileName);
-                else if (SelectedExportMode == ExportMode.JSON)
-                    _fileExportService.ExportToJson(Files, path, ExportFileName);
-            } catch (Exception ex)
-            {
-                MessageBox.Show($"An error occurred during export: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            MessageBox.Show("Files exported successfully.", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private bool CanLoadFiles()

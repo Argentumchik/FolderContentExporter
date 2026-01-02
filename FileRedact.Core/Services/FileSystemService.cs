@@ -1,15 +1,16 @@
-﻿using FileRedact.Core.Dto;
-using FileRedact.Core.Interfaces;
+﻿using FolderContentExporter.Dto;
+using FolderContentExporter.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace FileRedact.Core.Services
+namespace FolderContentExporter.Services
 {
     public class FileSystemService : IFileSystemService
     {
-        public IEnumerable<TextFileItem> GetFiles(string path, bool sub)
+        public async IAsyncEnumerable<TextFileItem> GetFilesAsync(string path, bool sub, [EnumeratorCancellation]CancellationToken token)
         {
             var options = new EnumerationOptions
             {
@@ -17,8 +18,11 @@ namespace FileRedact.Core.Services
                 RecurseSubdirectories = sub,
                 ReturnSpecialDirectories = false
             };
+
             foreach (var file in Directory.EnumerateFiles(path, "*", options))
             {
+                token.ThrowIfCancellationRequested();
+
                 FileInfo info;
 
                 try
@@ -38,7 +42,24 @@ namespace FileRedact.Core.Services
                     info.CreationTimeUtc,
                     info.LastWriteTimeUtc
                 );
+
+                await Task.Yield();
             }
+        }
+
+        public async Task<int> TotalFilesAsync(string path, bool sub)
+        {
+            return await Task.Run(() =>
+                Directory.EnumerateFiles(
+                    path,
+                    "*",
+                    new EnumerationOptions
+                    {
+                        IgnoreInaccessible = true,
+                        RecurseSubdirectories = sub,
+                        ReturnSpecialDirectories = false
+                    }).Count()
+                );
         }
     }
 }

@@ -1,11 +1,7 @@
-﻿using FileRedact.Core.Interfaces;
+﻿using FolderContentExporter.Interfaces;
 using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Windows;
 
-namespace FileRedact.Core.Services
+namespace FolderContentExporter.Services
 {
     public class FolderDialogService : IFolderDialogService
     {

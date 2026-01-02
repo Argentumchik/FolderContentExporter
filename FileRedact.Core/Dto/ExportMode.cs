@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 
-namespace FileRedact.Core.Dto
+namespace FolderContentExporter.Dto
 {
     public enum ExportMode
     {
