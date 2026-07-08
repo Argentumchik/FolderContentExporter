@@ -37,6 +37,7 @@ namespace FileRedact.Core
             services.AddSingleton<IFolderDialogService, FolderDialogService>();
             services.AddSingleton<IFileSystemService, FileSystemService>();
             services.AddSingleton<IFileExportService, FileExportService>();
+            services.AddSingleton<IErrorMapper, ErrorMapper>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();

@@ -6,6 +6,6 @@ namespace FolderContentExporter.Interfaces
 {
     public interface IFolderDialogService
     {
-        string LoadFolder();
+        string? LoadFolder();
     }
 }

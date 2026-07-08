@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace FolderContentExporter.Dto
+namespace FolderContentExporter.Enums
 {
     [Flags]
     public enum ExportFields

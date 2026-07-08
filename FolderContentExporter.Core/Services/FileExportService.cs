@@ -1,5 +1,6 @@
 ﻿using CsvHelper;
 using FolderContentExporter.Dto;
+using FolderContentExporter.Enums;
 using FolderContentExporter.Interfaces;
 using System;
 using System.Collections.Generic;

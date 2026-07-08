@@ -5,7 +5,7 @@ namespace FolderContentExporter.Services
 {
     public class FolderDialogService : IFolderDialogService
     {
-        public string LoadFolder()
+        public string? LoadFolder()
         {
             var dialog = new OpenFolderDialog();
 

@@ -1,5 +1,6 @@
 ﻿using FolderContentExporter.Commands;
 using FolderContentExporter.Dto;
+using FolderContentExporter.Enums;
 using System;
 using System.Collections.Generic;
 using System.IO;
