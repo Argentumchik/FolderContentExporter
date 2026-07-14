@@ -1,7 +1,7 @@
-﻿<Application x:Class="FileRedact.Core.App"
+﻿<Application x:Class="FolderContentExporter.Core.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:FileRedact.Core">
+             xmlns:local="clr-namespace:FolderContentExporter.Core">
     <Application.Resources>
          
     </Application.Resources>

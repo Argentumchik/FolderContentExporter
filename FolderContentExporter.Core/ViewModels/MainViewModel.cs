@@ -1,15 +1,12 @@
 ﻿using FolderContentExporter.Commands;
 using FolderContentExporter.Dto;
+using FolderContentExporter.Enums;
 using FolderContentExporter.Interfaces;
 using FolderContentExporter.View;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace FolderContentExporter.ViewModels
 {
@@ -18,30 +15,21 @@ namespace FolderContentExporter.ViewModels
         private readonly IFolderDialogService _folderDialogService;
         private readonly IFileSystemService _fileSystemService;
         private readonly IFileExportService _fileExportService;
+        private readonly IErrorMapper _errorMapper;
+        private readonly Func<ExportDialogWindow> _exportDialogWindowFactory;
 
         private string _selectedFolder = string.Empty;
-        private string _exportFileName = "file";
         private bool _subfoldersIncluded;
-        private bool _isLoading;
-        private string _isCancelled = "Hidden";
         private int _progress;
         private int _totalFiles = 1;
-        private string _textBack;
 
-        private ExportMode _selectedExportMode;
+        private AppError? _lastError;
+        private OperationState _state = OperationState.Idle;
         private CancellationTokenSource? _cts;
 
-        public Array ExportModes => Enum.GetValues<ExportMode>();
+        public bool IsCancelled => State == OperationState.Cancelled;
+        public bool HasError => LastError != null;
 
-        public string TextBack
-        {
-            get => _textBack;
-            set
-            {
-                _textBack = value;
-                OnPropertyChanged();
-            }
-        }
         public string SelectedFolder
         {
             get => _selectedFolder;
@@ -60,47 +48,40 @@ namespace FolderContentExporter.ViewModels
             {
                 _subfoldersIncluded = value;
                 OnPropertyChanged();
-                if (!string.IsNullOrEmpty(_selectedFolder))
+                if (!string.IsNullOrEmpty(_selectedFolder) 
+                    && State == OperationState.Completed)
                 {
-                    _ = LoadFiles();
+                    LoadFileCommand.Execute(null);
                 }
             }
         }
-        public bool IsLoading
+        public OperationState State
         {
-            get => _isLoading;
-            set
+            get => _state;
+            private set
             {
-                _isLoading = value;
+                if (_state == value)
+                {
+                    return;
+                }
+
+                _state = value;
                 OnPropertyChanged();
-                LoadFileCommand?.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(IsCancelled));
+
+                LoadFileCommand.RaiseCanExecuteChanged();
+                ((RelayCommand)ExportFileCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)CancelCommand).RaiseCanExecuteChanged();
             }
         }
-        public string IsCancelled
+        public AppError? LastError
         {
-            get => _isCancelled;
+            get => _lastError;
             set
             {
-                _isCancelled = value;
+                _lastError = value;
                 OnPropertyChanged();
-            }
-        }
-        public ExportMode SelectedExportMode
-        {
-            get => _selectedExportMode;
-            set
-            {
-                _selectedExportMode = value;
-                OnPropertyChanged();
-            }
-        }
-        public string ExportFileName
-        {
-            get => _exportFileName;
-            set
-            {
-                _exportFileName = value;
-                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasError));
             }
         }
         public int Progress
@@ -122,41 +103,57 @@ namespace FolderContentExporter.ViewModels
             }
         }
 
-        public ObservableCollection<TextFileItem> Files { get; } = [];
+        public ObservableCollection<TextFileItem> Files { get; } = new ObservableCollection<TextFileItem>();
 
         public ICommand SelectFolderCommand { get; }
         public RelayCommandAsync LoadFileCommand { get; }
         public ICommand ExportFileCommand { get; }
         public ICommand CancelCommand { get; }
 
-        public MainViewModel(IFolderDialogService folderDialogService, IFileSystemService fileSystemService, IFileExportService fileExportService)
+        public MainViewModel(IFolderDialogService folderDialogService, 
+                             IFileSystemService fileSystemService, 
+                             IFileExportService fileExportService, 
+                             IErrorMapper errorMapper,
+                             Func<ExportDialogWindow> exportDialogWindowFactory)
         {
             _folderDialogService = folderDialogService;
             _fileSystemService = fileSystemService;
             _fileExportService = fileExportService;
+            _errorMapper = errorMapper;
+            _exportDialogWindowFactory = exportDialogWindowFactory;
 
             SelectFolderCommand = new RelayCommand(SelectFolder);
             LoadFileCommand = new RelayCommandAsync(LoadFiles, CanLoadFiles);
             ExportFileCommand = new RelayCommand(ExportFile, CanExportFiles);
-            CancelCommand = new RelayCommand(Cancel, () => IsLoading);
+            CancelCommand = new RelayCommand(Cancel, () => State == OperationState.Loading);
         }
 
         private void SelectFolder()
         {
-            SelectedFolder = _folderDialogService.LoadFolder();
+            var folder = _folderDialogService.LoadFolder();
+
+            if (!string.IsNullOrEmpty(folder))
+            {
+                State = OperationState.Idle;
+                SelectedFolder = folder;
+            }
         }
+
         private void Cancel()
         {
+            if (State == OperationState.Loading)
+            {
+                State = OperationState.Cancelling;
+            }
             _cts?.Cancel();
         }
 
         private async Task LoadFiles()
         {
             Files.Clear();
+            State = OperationState.Loading;
             TotalFiles = await _fileSystemService.TotalFilesAsync(SelectedFolder, SubfoldersIncluded);
             Progress = 0;
-            IsLoading = true;
-            IsCancelled = "Hidden";
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -182,18 +179,28 @@ namespace FolderContentExporter.ViewModels
                         });
                     }
                 }, token);
+                State = OperationState.Completed;
             }
             catch (OperationCanceledException)
             {
-                IsCancelled = "Visible";
+                State = OperationState.Cancelled;
+                return;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error");
+                State = OperationState.Failed;
+                LastError = _errorMapper.Map(ex);
+                MessageBox.Show(LastError.Message, "Error");
+                return;
             }
             finally
             {
-                IsLoading = false;
+                if (State != OperationState.Cancelled 
+                    && State != OperationState.Failed 
+                    && State != OperationState.Completed)
+                {
+                    State = OperationState.Idle;
+                }
                 _cts.Dispose();
                 _cts = null;
             }
@@ -201,15 +208,17 @@ namespace FolderContentExporter.ViewModels
 
         private void ExportFile()
         {
-            var dialog = new ExportDialogWindow();
-            var vm = new ExportDialogViewModel();
-            dialog.DataContext = vm;
+            ExportDialogWindow window = _exportDialogWindowFactory();
 
-            if (dialog.ShowDialog() == true)
+            if (window.ShowDialog() == true)
             {
-                var options = vm.BuildOptions();
+                var options = window.GetExportData();
+
+                if (options == null) return;
 
                 var path = _folderDialogService.LoadFolder();
+
+                if (string.IsNullOrEmpty(path)) return;
 
                 try
                 {
@@ -217,21 +226,30 @@ namespace FolderContentExporter.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"An error occurred during export: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    LastError = _errorMapper.Map(ex);
+                    MessageBox.Show($"An error occurred during export: {LastError.Message}",
+                        "Export Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                     return;
                 }
 
-                MessageBox.Show("Files exported successfully.", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Files exported successfully.\nFiles: {Progress}\nSaved to: {path}",
+                    "Export Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
         }
 
         private bool CanLoadFiles()
         {
-            return !string.IsNullOrEmpty(SelectedFolder) && Directory.Exists(SelectedFolder);
+            return !string.IsNullOrEmpty(SelectedFolder) 
+                && Directory.Exists(SelectedFolder) 
+                && (State == OperationState.Idle || State == OperationState.Completed || State == OperationState.Cancelled);
         }
         private bool CanExportFiles()
         {
-            return !string.IsNullOrEmpty(ExportFileName) && Files.Count > 0;
+            return State == OperationState.Completed && Files.Count > 0;
         }
     }
 }

@@ -4,11 +4,9 @@ using FolderContentExporter.Services;
 using FolderContentExporter.View;
 using FolderContentExporter.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using System.Configuration;
-using System.Data;
 using System.Windows;
 
-namespace FileRedact.Core
+namespace FolderContentExporter.Core
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -37,14 +35,21 @@ namespace FileRedact.Core
             services.AddSingleton<IFolderDialogService, FolderDialogService>();
             services.AddSingleton<IFileSystemService, FileSystemService>();
             services.AddSingleton<IFileExportService, FileExportService>();
+            services.AddSingleton<IErrorMapper, ErrorMapper>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
-            services.AddSingleton<ExportDialogViewModel>();
+            services.AddTransient<ExportDialogViewModel>();
 
             // Views
             services.AddSingleton<MainWindow>();
-            services.AddSingleton<ExportDialogWindow>();
+            services.AddTransient<ExportDialogWindow>();
+
+            //Fabric
+            services.AddSingleton<Func<ExportDialogWindow>>(provider =>
+            {
+                return () => provider.GetRequiredService<ExportDialogWindow>();
+            });
         }
     }
 
