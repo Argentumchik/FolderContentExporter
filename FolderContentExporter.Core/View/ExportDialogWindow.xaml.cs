@@ -1,15 +1,6 @@
-﻿using FolderContentExporter.ViewModels;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using FolderContentExporter.Dto;
+using FolderContentExporter.ViewModels;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace FolderContentExporter.View
 {
@@ -18,17 +9,22 @@ namespace FolderContentExporter.View
     /// </summary>
     public partial class ExportDialogWindow : Window
     {
-        public ExportDialogWindow()
+        private readonly ExportDialogViewModel _vm;
+        public ExportDialogWindow(ExportDialogViewModel vm)
         {
             InitializeComponent();
+            DataContext = vm;
+            _vm = vm;
 
             Loaded += (_, _) =>
             {
-                if (DataContext is ExportDialogViewModel vm)
-                {
-                    vm.CloseRequested += result => DialogResult = result;
-                }
+                vm.CloseRequested += result => DialogResult = result;
             };
+        }
+
+        public ExportOptionsDto? GetExportData()
+        {
+            return _vm.ExportOptions;
         }
     }
 }

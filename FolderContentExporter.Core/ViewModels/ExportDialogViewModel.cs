@@ -20,6 +20,7 @@ namespace FolderContentExporter.ViewModels
         private bool _includeSize;
         private bool _includeCreatedDate;
         private bool _includeModifiedDate;
+        private ExportOptionsDto? _exportOptions;
 
         private string _exportFileName = "file";
 
@@ -105,8 +106,17 @@ namespace FolderContentExporter.ViewModels
                 OnPropertyChanged();
             }
         }
+        public ExportOptionsDto? ExportOptions
+        {
+            get => _exportOptions;
+            set
+            {
+                _exportOptions = value;
+                OnPropertyChanged();
+            }
+        }
 
-        public ExportOptionsDto BuildOptions()
+        public ExportOptionsDto? BuildOptions()
         {
             ExportFileName = string.Concat(ExportFileName.Split(Path.GetInvalidFileNameChars()));
             if (string.IsNullOrEmpty(ExportFileName))
@@ -133,6 +143,10 @@ namespace FolderContentExporter.ViewModels
 
         public void Exit()
         {
+            ExportOptions = BuildOptions();
+
+            if (ExportOptions == null) return;
+
             CloseRequested?.Invoke(true);
         }
     }

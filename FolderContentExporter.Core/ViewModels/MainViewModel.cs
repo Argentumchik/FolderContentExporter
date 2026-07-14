@@ -3,14 +3,10 @@ using FolderContentExporter.Dto;
 using FolderContentExporter.Enums;
 using FolderContentExporter.Interfaces;
 using FolderContentExporter.View;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 
 namespace FolderContentExporter.ViewModels
 {
@@ -20,6 +16,7 @@ namespace FolderContentExporter.ViewModels
         private readonly IFileSystemService _fileSystemService;
         private readonly IFileExportService _fileExportService;
         private readonly IErrorMapper _errorMapper;
+        private readonly Func<ExportDialogWindow> _exportDialogWindowFactory;
 
         private string _selectedFolder = string.Empty;
         private bool _subfoldersIncluded;
@@ -113,12 +110,17 @@ namespace FolderContentExporter.ViewModels
         public ICommand ExportFileCommand { get; }
         public ICommand CancelCommand { get; }
 
-        public MainViewModel(IFolderDialogService folderDialogService, IFileSystemService fileSystemService, IFileExportService fileExportService, IErrorMapper errorMapper)
+        public MainViewModel(IFolderDialogService folderDialogService, 
+                             IFileSystemService fileSystemService, 
+                             IFileExportService fileExportService, 
+                             IErrorMapper errorMapper,
+                             Func<ExportDialogWindow> exportDialogWindowFactory)
         {
             _folderDialogService = folderDialogService;
             _fileSystemService = fileSystemService;
             _fileExportService = fileExportService;
             _errorMapper = errorMapper;
+            _exportDialogWindowFactory = exportDialogWindowFactory;
 
             SelectFolderCommand = new RelayCommand(SelectFolder);
             LoadFileCommand = new RelayCommandAsync(LoadFiles, CanLoadFiles);
@@ -128,8 +130,15 @@ namespace FolderContentExporter.ViewModels
 
         private void SelectFolder()
         {
-            SelectedFolder = _folderDialogService.LoadFolder();
+            var folder = _folderDialogService.LoadFolder();
+
+            if (!string.IsNullOrEmpty(folder))
+            {
+                State = OperationState.Idle;
+                SelectedFolder = folder;
+            }
         }
+
         private void Cancel()
         {
             if (State == OperationState.Loading)
@@ -142,9 +151,9 @@ namespace FolderContentExporter.ViewModels
         private async Task LoadFiles()
         {
             Files.Clear();
+            State = OperationState.Loading;
             TotalFiles = await _fileSystemService.TotalFilesAsync(SelectedFolder, SubfoldersIncluded);
             Progress = 0;
-            State = OperationState.Loading;
 
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
@@ -180,7 +189,8 @@ namespace FolderContentExporter.ViewModels
             catch (Exception ex)
             {
                 State = OperationState.Failed;
-                MessageBox.Show(ex.Message, "Error");
+                LastError = _errorMapper.Map(ex);
+                MessageBox.Show(LastError.Message, "Error");
                 return;
             }
             finally
@@ -198,15 +208,17 @@ namespace FolderContentExporter.ViewModels
 
         private void ExportFile()
         {
-            var dialog = new ExportDialogWindow();
-            var vm = new ExportDialogViewModel();
-            dialog.DataContext = vm;
+            ExportDialogWindow window = _exportDialogWindowFactory();
 
-            if (dialog.ShowDialog() == true)
+            if (window.ShowDialog() == true)
             {
-                var options = vm.BuildOptions();
+                var options = window.GetExportData();
+
+                if (options == null) return;
 
                 var path = _folderDialogService.LoadFolder();
+
+                if (string.IsNullOrEmpty(path)) return;
 
                 try
                 {
@@ -214,7 +226,8 @@ namespace FolderContentExporter.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"An error occurred during export: {ex.Message}",
+                    LastError = _errorMapper.Map(ex);
+                    MessageBox.Show($"An error occurred during export: {LastError.Message}",
                         "Export Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);

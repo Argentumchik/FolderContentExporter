@@ -5,22 +5,54 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FolderContentExporter.View"
         mc:Ignorable="d"
-        Title="ExportDialogWindow" Height="265" Width="380">
-    
-    <GroupBox Header="Include fields" VerticalAlignment="Top">
-        <StackPanel Margin="5">
-            <CheckBox Content="File Name" Margin="10,5,0,0" IsChecked="{Binding IncludeFileName}" />
-            <CheckBox Content="Size" Margin="10,10,0,0" IsChecked="{Binding IncludeSize}" />
-            <CheckBox Content="Extention" Margin="10,10,0,0" IsChecked="{Binding IncludeExtension}" />
-            <CheckBox Content="Path" Margin="10,10,0,0" IsChecked="{Binding IncludePath}" />
-            <CheckBox Content="Created Date" Margin="10,10,0,0" IsChecked="{Binding IncludeCreatedDate}" />
-            <CheckBox Content="Modified Date" Margin="10,10,0,0" IsChecked="{Binding IncludeModifiedDate}" />
+        Title="Export Settings" 
+        SizeToContent="WidthAndHeight" 
+        WindowStartupLocation="CenterOwner"
+        MinWidth="350">
 
-            <StackPanel Orientation="Horizontal">
-                <TextBox HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,20,0,0" Width="150" Height="20" Text="{Binding ExportFileName, UpdateSourceTrigger=PropertyChanged}" />
-                <ComboBox HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10, 0, 0, 0" VerticalContentAlignment="Center" Height="20" Width="79" ItemsSource="{Binding ExportModes}" SelectedItem="{Binding SelectedExportMode}"/>
-                <Button Content="Export" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,20,0,0" Width="75" Height="25" Command="{Binding ExitCommand}"/>
-            </StackPanel>
+    <!-- Добавили Margin="10", чтобы рамка GroupBox не прилипала к краям окна -->
+    <GroupBox Header="Include fields" Margin="10">
+
+        <StackPanel Margin="10">
+            <!-- Чекбоксы теперь без жестких отступов слева, просто аккуратно лежат друг под другом -->
+            <CheckBox Content="File Name" Margin="0,5,0,0" IsChecked="{Binding IncludeFileName}" />
+            <CheckBox Content="Size" Margin="0,5,0,0" IsChecked="{Binding IncludeSize}" />
+            <CheckBox Content="Extension" Margin="0,5,0,0" IsChecked="{Binding IncludeExtension}" />
+            <CheckBox Content="Path" Margin="0,5,0,0" IsChecked="{Binding IncludePath}" />
+            <CheckBox Content="Created Date" Margin="0,5,0,0" IsChecked="{Binding IncludeCreatedDate}" />
+            <CheckBox Content="Modified Date" Margin="0,5,0,0" IsChecked="{Binding IncludeModifiedDate}" />
+
+            <!-- Для нижней строки с вводом имени файла используем Grid вместо StackPanel -->
+            <!-- Это позволит полю ввода имени файла занимать всё свободное место (*) -->
+            <Grid Margin="0,20,0,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <!-- Поле ввода имени (растянется) -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Выбор формата (по размеру текста) -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Кнопка (по размеру текста) -->
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" 
+                         Text="{Binding ExportFileName, UpdateSourceTrigger=PropertyChanged}" 
+                         VerticalContentAlignment="Center" 
+                         Margin="0,0,10,0" 
+                         Padding="2"/>
+
+                <ComboBox Grid.Column="1" 
+                          ItemsSource="{Binding ExportModes}" 
+                          SelectedItem="{Binding SelectedExportMode}" 
+                          VerticalContentAlignment="Center" 
+                          Margin="0,0,10,0" 
+                          MinWidth="80"/>
+
+                <Button Grid.Column="2" 
+                        Content="Export" 
+                        Command="{Binding ExitCommand}" 
+                        Padding="15,4"/>
+            </Grid>
+
         </StackPanel>
     </GroupBox>
 </Window>
